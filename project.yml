@@ -1,0 +1,99 @@
+title: "Fine-tune a Model for Identifying Keywords in a Textbook Section"
+description: "A spaCy project that accepts labelled data in jsonl format and fine-tunes a transformer-based sequence labeling system."
+
+# Variables can be referenced across the project.yml using ${vars.var_name}
+vars:
+  name: "textbook_keyword_extractor"
+  lang: "en"
+  config: "longformer.cfg"
+  raw: "all_terms.jsonl"
+  version: "0.0.0"
+  # Set your GPU ID, -1 is CPU
+  gpu_id: 0
+
+
+# These are the directories that the project needs. The project CLI will make
+# sure that they always exist.
+directories: ["assets", "corpus", "configs", "images", "training", "scripts", "packages"]
+
+# Assets that should be downloaded or available in the directory. We're shipping
+# them with the project, so they won't have to be downloaded.
+assets:
+  - dest: "assets/${vars.raw}"
+    checksum:
+    description: "A jsonl file with name, text, and label fields OR a prepocessed DocBin file with custom labels." 
+
+# Workflows are sequences of commands (see below) executed in order. You can
+# run them via "spacy project run [workflow]". If a commands's inputs/outputs
+# haven't changed, it won't be re-run.
+workflows:
+  all:
+    - convert
+    - train
+    - evaluate
+
+# Project commands, specified in a style similar to CI config files (e.g. Azure
+# pipelines). The name is the command name that lets you trigger the command
+# via "spacy project run [command] [path]". The help message is optional and
+# shown when executing "spacy project run [optional command] [path] --help".
+
+commands:
+
+  - name: "convert"
+    help: "Convert the data to spaCy's binary format. This script assumes a assets/${vars.raw} is a json lines file with three fields per line: id, data, and label. Data should be the raw utf-8 text. Label should be a list of start, end, label_name lists."
+    script:
+      - "python scripts/convert.py assets/${vars.raw} 60"
+    deps:
+      - "assets/${vars.raw}"
+      - "scripts/convert.py"
+    outputs:
+      - "corpus/train.spacy"
+      - "corpus/dev.spacy"
+      - "corpus/test.spacy"
+      
+  - name: "train"
+    help: "Train the NER model"
+    script:
+      - "python -m spacy train configs/${vars.config} --output training/ --paths.train corpus/train.spacy --paths.dev corpus/dev.spacy --gpu-id ${vars.gpu_id}"
+    deps:
+      - "configs/${vars.config}"
+      - "corpus/train.spacy"
+      - "corpus/dev.spacy"
+    outputs:
+      - "training/model-best"
+
+  - name: "evaluate"
+    help: "Evaluate the model and export metrics"
+    script:
+      - "python -m spacy evaluate training/model-best corpus/dev.spacy --output training/metrics.json --gpu-id ${vars.gpu_id}"
+    deps:
+      - "corpus/dev.spacy"
+      - "training/model-best"
+    outputs:
+      - "training/metrics.json"
+
+  - name: "package"
+    help: "Package the trained model as a pip package"
+    script:
+      - "python -m spacy package training/model-best packages --name ${vars.name} --version ${vars.version} --build wheel --force"
+    deps:
+      - "training/model-best"
+    outputs_no_cache:
+      - "packages/${vars.lang}_${vars.name}-${vars.version}/dist/${vars.lang}_${vars.name}-${vars.version}-py3-none-any.whl"
+
+  - name: "visualize-model"
+    help: "Visualize the model's output interactively."
+    script:
+      - "python scripts/visualize_model.py training/model-best \"My name is Henrietta. This paper was written and developed by Henrietta. According to Margaret Thatcher, methylene is the best chemical, but Juan disagrees. Henrietta | Page 2\" images/example_vis.html"
+    deps:
+      - "scripts/visualize_model.py"
+      - "training/model-best"
+    outputs:
+      - "images/example_vis.html"
+      
+  - name: "push_to_hub"
+    help: "Upload the trained model to the Hugging Face Hub"
+    script:
+      - "python -m spacy huggingface-hub push packages/en_${vars.name}-${vars.version}/dist/en_${vars.name}-${vars.version}-py3-none-any.whl"
+    deps:
+      - "packages/en_${vars.name}-${vars.version}/dist/en_${vars.name}-${vars.version}-py3-none-any.whl"
