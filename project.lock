@@ -1,0 +1,105 @@
+convert:
+  cmd: python -m spacy run convert
+  script:
+    - python scripts/convert.py assets/openstax_all_term_offsets.jsonl 70
+  deps:
+    - path: assets/openstax_all_term_offsets.jsonl
+      md5: 7782731678d6fd027bf58e24b9ecda81
+    - path: scripts/convert.py
+      md5: 39a1ae7c27be08b1e4ab032c72010403
+  outs:
+    - path: corpus/train.spacy
+      md5: 917fca77e2f666eed914bca71756a61f
+    - path: corpus/dev.spacy
+      md5: 5c4f9ee9238c12af0b3fe13b543a27a5
+    - path: corpus/test.spacy
+      md5: 9ff85149e7d2590e3d1c4a9daf689947
+  spacy_version: 3.4.3
+  spacy_git_version: 63673a792
+create-config:
+  cmd: python -m spacy run create-config
+  script:
+    - python scripts/create_config.py en_core_web_trf ner configs/config.cfg
+  deps:
+    - path: scripts/create_config.py
+      md5: 7d9930659adc39aef19d8b3120e8d87e
+  outs:
+    - path: configs/config.cfg
+      md5: 7d05830b75ca267bbb9a9f1b59836a10
+  spacy_version: 3.3.1
+  spacy_git_version: 5fb597f77
+train:
+  cmd: python -m spacy run train
+  script:
+    - python -m spacy train configs/longformer.cfg --output training/ --paths.train
+      corpus/train.spacy --paths.dev corpus/dev.spacy --gpu-id 0
+  deps:
+    - path: configs/longformer.cfg
+      md5: 9eb0842ab1512e5cc774d139a3400385
+    - path: corpus/train.spacy
+      md5: cd54c9c00178d3563672ba794e1e2925
+    - path: corpus/dev.spacy
+      md5: 6cad3a7ab431a65e59bbd3a901069e93
+  outs:
+    - path: training/model-best
+      md5: 6ab03282c11a64dcb7b6a05378c56870
+  spacy_version: 3.3.1
+  spacy_git_version: 5fb597f77
+evaluate:
+  cmd: python -m spacy run evaluate
+  script:
+    - python -m spacy evaluate training/model-best corpus/dev.spacy --output training/metrics.json
+      --gpu-id 0
+  deps:
+    - path: corpus/dev.spacy
+      md5: 6cad3a7ab431a65e59bbd3a901069e93
+    - path: training/model-best
+      md5: 6ab03282c11a64dcb7b6a05378c56870
+  outs:
+    - path: training/metrics.json
+      md5: 1c9d99dc518bf7dfbd07e6fa4b3ad0bf
+  spacy_version: 3.3.1
+  spacy_git_version: 5fb597f77
+visualize-model:
+  cmd: python -m spacy run visualize-model
+  script:
+    - python scripts/visualize_model.py training/model-best "My name is Henrietta.
+      This paper was written and developed by Margaret. According to Roland Barthes,
+      Methylene is the best chemical." images/example_vis.html
+  deps:
+    - path: scripts/visualize_model.py
+      md5: a8711d5b9a800831c7d60021766b88a6
+    - path: training/model-best
+      md5: 571b24283dfe62c4ad719e73ff987946
+  outs:
+    - path: images/example_vis.html
+      md5: 07b03f3565259018ce3a9a18c82916df
+  spacy_version: 3.3.1
+  spacy_git_version: 5fb597f77
+init:
+  cmd: python -m spacy run init
+  script:
+    - python -m spacy init labels configs/config.cfg corpus/labels --verbose --gpu-id
+      0 --paths.train corpus/train.spacy --paths.dev corpus/dev.spacy
+  deps:
+    - path: configs/config.cfg
+      md5: 140c5ded099325bca8e2b0bd3bb00624
+  outs:
+    - path: corpus/labels/ner.json
+      md5: 3a0a768826d6b14d0668db8bffd856ae
+    - path: corpus/labels/parser.json
+      md5: 940f2149459c98063e2ee980834823c4
+    - path: corpus/labels/tagger.json
+      md5: 362d5efb2c2fd0a7cb97cce10a8cf4b6
+  spacy_version: 3.3.1
+  spacy_git_version: 5fb597f77
+push_to_hub:
+  cmd: python -m spacy run push_to_hub
+  script:
+    - python -m spacy huggingface-hub push packages/en_student_name_detector-0.0.1/dist/en_student_name_detector-0.0.1-py3-none-any.whl
+  deps:
+    - path: packages/en_student_name_detector-0.0.1/dist/en_student_name_detector-0.0.1-py3-none-any.whl
+      md5: 89257e745bab755fe2213932166c7248
+  outs: []
+  spacy_version: 3.4.3
+  spacy_git_version: 63673a792

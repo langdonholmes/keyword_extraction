@@ -47,12 +47,17 @@ def convert(text_lines: list):
         doc = nlp.make_doc(text)
         doc._.name = line['name']
         ents = []
-        for start, end, label in line['labels']:
-            span = doc.char_span(start, end, label=label, alignment_mode="strict")
+        for sequence_label in line['labels']:
+            if len(sequence_label) == 2:
+                start, end = sequence_label
+                label = 'keyterm'
+            else:
+                start, end, label = sequence_label
+            span = doc.char_span(start, end, label=label, alignment_mode='strict')
             if span is None:
-                msg = f"Document: {line['name']}\nEntity [{start}, {end}, {label}] does not align with token boundaries.\nOriginal entity was '{doc.text[start:end]}'"
+                msg = f"Document: {line['name']}\nEntity [{start}, {end}] does not align with token boundaries.\nOriginal entity was '{doc.text[start:end]}'"
                 span = doc.char_span(start, end, label=label, alignment_mode='contract')
-                msg += f"\nAttempting to set entity as '{span}'"
+                msg += f"\nSetting entity as '{span}'"
                 warnings.warn(msg)
             ents.append(span)
         doc.ents = ents

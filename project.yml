@@ -6,7 +6,7 @@ vars:
   name: "textbook_keyword_extractor"
   lang: "en"
   config: "longformer.cfg"
-  raw: "all_terms.jsonl"
+  raw: "openstax_all_term_offsets.jsonl"
   version: "0.0.0"
   # Set your GPU ID, -1 is CPU
   gpu_id: 0
@@ -40,9 +40,9 @@ workflows:
 commands:
 
   - name: "convert"
-    help: "Convert the data to spaCy's binary format. This script assumes a assets/${vars.raw} is a json lines file with three fields per line: id, data, and label. Data should be the raw utf-8 text. Label should be a list of start, end, label_name lists."
+    help: "Convert the data to spaCy's binary format. This script assumes a assets/${vars.raw} is a json lines file with three fields per line: id, data, and label. Data should be the raw utf-8 text. Label should be a list of start, end(, label_name) lists."
     script:
-      - "python scripts/convert.py assets/${vars.raw} 60"
+      - "python scripts/convert.py assets/${vars.raw} 70"
     deps:
       - "assets/${vars.raw}"
       - "scripts/convert.py"
