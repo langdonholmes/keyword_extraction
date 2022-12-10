@@ -6,14 +6,14 @@ convert:
     - path: assets/openstax_all_term_offsets.jsonl
       md5: 7782731678d6fd027bf58e24b9ecda81
     - path: scripts/convert.py
-      md5: 051c25de251e198b70f09cc48ca94cd2
+      md5: fbb3e93860486efb603a6528a83da431
   outs:
     - path: corpus/train.spacy
-      md5: cc4f10aa6abf6b513a8f2548e6559c34
+      md5: 18cea2487d34a8719e2289ba4972b2b1
     - path: corpus/dev.spacy
-      md5: 7ef5353cabbfeadb966bd4626ce13d4c
+      md5: 14c2f018ac14d38678f25a0dcc3d3190
     - path: corpus/test.spacy
-      md5: 0b0d759897bfa68faeb7833222681af0
+      md5: 3ed46a793ea5beb5f62a737945d9a0f3
   spacy_version: 3.4.3
   spacy_git_version: 63673a792
 create-config:
