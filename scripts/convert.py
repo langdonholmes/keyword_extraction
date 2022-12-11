@@ -14,28 +14,38 @@ if not Doc.has_extension('name'):
     Doc.set_extension('name', default=None)
 nlp = spacy.blank('en')
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 import logging
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 def main(input_path: Path, train_percent: int) -> None:
+    '''Expects a json lines file with (name, text, labels) tuples
+    Optionally allows for grouping variable that should be an int.
+    '''
     input_path = Path(input_path)
     
-    if input_path.suffix == '.jsonl':
-        raw = list(srsly.read_jsonl(input_path))
-        if any([key not in raw[0].keys() for key in ['name', 'text', 'labels']]):
-            logging.error('Raw data is expected to be json lines with name, text, labels keys.')
-            return
-        docs = list(convert(raw))
-    elif input_path.suffix == '.spacy':
-        docs = list(DocBin().from_disk(input_path).get_docs(nlp.vocab))
-    else:
-        logging.error('Unknown filetype. ".spacy" and ".jsonl" are supported.')
+    if not input_path.suffix == '.jsonl':
+        logging.error('Unknown filetype. ".jsonl" is supported.')
         return
+        
+    raw = list(srsly.read_jsonl(input_path))
+    if any([key not in raw[0].keys() for key in ['name', 'text', 'labels']]):
+        logging.error('Raw data is expected to be json lines with name, text, labels keys.')
+        return
+
+    docs = list(convert(raw))
     
-    train, _remains = train_test_split(docs, train_size=train_percent/100, random_state=0)
-    dev, test = train_test_split(_remains, train_size=0.5, random_state=0)
+    if 'group' in raw[0].keys():
+        groups = [x['group'] for x in raw]
+        group_split = GroupShuffleSplit(n_splits=1, train_size=train_percent/100, random_state=42)
+        train_index, _remains_index = next(group_split.split(docs, groups))
+        train = [docs[i] for i in train_index]
+        _remains = [docs[i] for i in _remains_index]
+    else:
+        train, _remains = train_test_split(docs, train_size=train_percent/100, random_state=42)
+    
+    dev, test = train_test_split(_remains, train_size=0.5, random_state=42)
     to_docbin(train, 'corpus/train.spacy')
     to_docbin(dev, 'corpus/dev.spacy')
     to_docbin(test, 'corpus/test.spacy')
