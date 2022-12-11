@@ -4,16 +4,16 @@ convert:
     - python scripts/convert.py assets/openstax_all_term_offsets.jsonl 70
   deps:
     - path: assets/openstax_all_term_offsets.jsonl
-      md5: 7782731678d6fd027bf58e24b9ecda81
+      md5: b39f603d76018fb6c1269bc49cd78e9c
     - path: scripts/convert.py
-      md5: fbb3e93860486efb603a6528a83da431
+      md5: ed100f176e9fb923d0bbba9508551989
   outs:
     - path: corpus/train.spacy
-      md5: 18cea2487d34a8719e2289ba4972b2b1
+      md5: 9eb60c1d2992e033791a6f7bda717200
     - path: corpus/dev.spacy
-      md5: 14c2f018ac14d38678f25a0dcc3d3190
+      md5: fe001b2d7458ac15ef488078d3bf8c87
     - path: corpus/test.spacy
-      md5: 3ed46a793ea5beb5f62a737945d9a0f3
+      md5: 4148904c50c3adb6031080c86020fd56
   spacy_version: 3.4.3
   spacy_git_version: 63673a792
 create-config:

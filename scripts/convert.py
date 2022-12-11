@@ -16,19 +16,22 @@ nlp = spacy.blank('en')
 
 from sklearn.model_selection import train_test_split
 
+import logging
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+
 def main(input_path: Path, train_percent: int) -> None:
     input_path = Path(input_path)
     
     if input_path.suffix == '.jsonl':
         raw = list(srsly.read_jsonl(input_path))
         if any([key not in raw[0].keys() for key in ['name', 'text', 'labels']]):
-            warnings.warn("Raw data is expected to be json lines with name, text, labels keys.")
+            logging.error('Raw data is expected to be json lines with name, text, labels keys.')
             return
         docs = list(convert(raw))
     elif input_path.suffix == '.spacy':
         docs = list(DocBin().from_disk(input_path).get_docs(nlp.vocab))
     else:
-        warnings.warn("Unknown filetype. '.spacy' and '.jsonl' are supported.")
+        logging.error('Unknown filetype. ".spacy" and ".jsonl" are supported.')
         return
     
     train, _remains = train_test_split(docs, train_size=train_percent/100, random_state=0)
@@ -61,26 +64,53 @@ def refine_span(doc, st, end, label):
     If a label crosses a token boundary, msg the problem 
     and shrink the sequence to the nearest token boundary.
     '''
+    
+    # terms like "y-axis" were scraped as " -axis".
+    # move the start back to cover the "y " or the "trans" in "trans -fat"
+    # do not worry about the space...
+    if doc.text[st] == '-':
+        st -= 2 # move start back to cover whitespace
+        while not doc.text[st-1].isspace():
+            st -= 1
+            
     orig_sequence = doc.text[st:end]
     
-    # matches longest sequence that starts and ends with a letter, number, or round bracket.
-    no_leading_trailing_space_or_punct = re.compile(r'[\(a-zA-Z0-9].*[a-zA-Z0-9\)]') 
-    match = re.search(no_leading_trailing_space_or_punct, orig_sequence)
-    new_sequence = match[0] if match else orig_sequence
+    # regex to match word characters
+    just_word_characters = re.compile(r'\w+')
+    
+    # matches longest sequence that starts and ends with a letter, number, or allowed punctuation
+    # allowed punctuation is rounded quotation marks, straight quotation marks, and round brackets.
+    no_leading_trailing_space_or_punct = re.compile(r'[\(\w\"\“].*[\w\"\”\)]')
+    
+    if (match := re.search(no_leading_trailing_space_or_punct, orig_sequence)):
+        new_sequence = match[0]
+    elif (match:= re.search(just_word_characters, orig_sequence)):
+        new_sequence = match[0]
+    else:
+        logging.warning(f'No valid sequence found for "{orig_sequence}"')
+        return None
 
     if new_sequence != orig_sequence:
         st = st + match.start() # offset start ind by match start
         end = end - (len(orig_sequence) - match.end()) # offset end index by (old string length - new string length)        
-        msg = f'Entity {orig_sequence} transformed to {new_sequence} at [{st}, {end}]'
-        warnings.warn(msg)
+        logging.info(f'Sequence "{orig_sequence}" transformed to "{new_sequence}" at [{st}, {end}]')
     
     span = doc.char_span(st, end, label=label, alignment_mode='strict')
     
+    # try expanding the span
     if span is None:
-        msg = f'Entity [{st}, {end}] does not align with token boundaries.\nOriginal entity was "{orig_sequence}"'
+        logging.info(f'Sequence [{st}, {end}] does not align with token boundaries.\nOriginal sequence was "{orig_sequence}"')
         span = doc.char_span(st, end, label=label, alignment_mode='expand')
-        msg += f'\nSetting entity as "{span}" at [{span.start_char}, {span.end_char}]'
-        warnings.warn(msg)
+        if span:
+            logging.info(f'Setting sequence as "{span}" at [{span.start_char}, {span.end_char}]')
+        else:
+            logging.warning(f'Failed to create span. URL:\n{doc._.name}')
+            return None
+    
+    # If all our checks fail to get rid of leading/trailing whitespace, discard the span...
+    if span[0].is_space or span[-1].is_space:
+        logging.warning(f'Leading or Trailing whitespace detected in "{span}"')
+        return None
     
     return span
 
