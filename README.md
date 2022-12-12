@@ -1,6 +1,6 @@
-# langdonholmes/
+# Keyword Extraction
 
-This is a keyword extraction model trained on OpenStax textbooks.
+This is a project for training a keyword extraction model. The model labels keyterms in OpenStax textbooks.
 
 ## 🚀 Quickstart
 
