@@ -1,0 +1,6 @@
+/src/.ipynb*
+/assets
+/corpus
+/data
+/training
+/results
