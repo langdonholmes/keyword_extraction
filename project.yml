@@ -6,8 +6,8 @@ vars:
   name: "textbook_keyword_extractor"
   lang: "en"
   config: "longformer.cfg"
-  raw: "openstax_all_term_offsets.jsonl"
-  version: "0.0.0"
+  raw: "openstax.jsonl"
+  version: "0.0.1"
   # Set your GPU ID, -1 is CPU
   gpu_id: 0
 

@@ -35,16 +35,16 @@ train:
       corpus/train.spacy --paths.dev corpus/dev.spacy --gpu-id 0
   deps:
     - path: configs/longformer.cfg
-      md5: 9eb0842ab1512e5cc774d139a3400385
+      md5: 9f354344b416f8ff9f9156da0b5557eb
     - path: corpus/train.spacy
-      md5: cd54c9c00178d3563672ba794e1e2925
+      md5: 7eee7e1b677a2c0f25668fc75de21b72
     - path: corpus/dev.spacy
-      md5: 6cad3a7ab431a65e59bbd3a901069e93
+      md5: 9f1dd674b9c415f164234f56c6d1f770
   outs:
     - path: training/model-best
-      md5: 6ab03282c11a64dcb7b6a05378c56870
-  spacy_version: 3.3.1
-  spacy_git_version: 5fb597f77
+      md5: d06353cd3ee6feb7ed0383c033faacc3
+  spacy_version: 3.5.0
+  spacy_git_version: dec81508d
 evaluate:
   cmd: python -m spacy run evaluate
   script:
